@@ -1,0 +1,6 @@
+salesperson,revenue,region
+John,10000,East
+,5000,West
+Jane,not-a-number,West
+Amit,"12,500",North
+Ravi,-200,South

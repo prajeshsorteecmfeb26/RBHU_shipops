@@ -1,0 +1,49 @@
+# Local full-stack environment: docker compose up --build
+# Web: http://localhost:8080  API: http://localhost:4000  Swagger: http://localhost:4000/api-docs
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shipops
+      POSTGRES_PASSWORD: shipops
+      POSTGRES_DB: shipops
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shipops"]
+      interval: 5s
+      retries: 10
+
+  analytics:
+    build: ./analytics
+    environment:
+      INTERNAL_API_KEY: ${ANALYTICS_API_KEY:-dev-internal-key-change-me}
+    ports: ["5001:5001"]
+
+  api:
+    build: ./backend
+    depends_on:
+      db: { condition: service_healthy }
+      analytics: { condition: service_started }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://shipops:shipops@db:5432/shipops?schema=public
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+      AUTH_MODE: local
+      JWT_SECRET: ${JWT_SECRET:-local-docker-secret-change-me-0123456789abcdef}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANALYTICS_SERVICE_URL: http://analytics:5001
+      ANALYTICS_API_KEY: ${ANALYTICS_API_KEY:-dev-internal-key-change-me}
+    # Apply migrations + seed demo data, then start
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts; node dist/server.js"
+    ports: ["4000:4000"]
+
+  web:
+    build:
+      context: ./frontend
+    depends_on: [api]
+    ports: ["8080:80"]
+
+volumes:
+  pgdata:

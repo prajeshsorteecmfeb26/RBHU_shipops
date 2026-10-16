@@ -1,0 +1,92 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+permissions:
+  id-token: write   # OIDC federated credentials, no stored Azure secrets
+  contents: read
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: az acr login -n ${{ vars.ACR_NAME }}
+      - name: Build & push images (tag = commit SHA)
+        run: |
+          for s in backend analytics frontend; do
+            docker build -t ${{ vars.ACR_NAME }}.azurecr.io/shipops-$s:$IMAGE_TAG ./$s
+            docker push ${{ vars.ACR_NAME }}.azurecr.io/shipops-$s:$IMAGE_TAG
+          done
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    # 'prod' environment has required reviewers configured in GitHub
+    environment: ${{ inputs.environment || 'dev' }}
+    env:
+      RG: ${{ vars.RESOURCE_GROUP }}
+      API_APP: ${{ vars.API_APP_NAME }}
+      WEB_APP: ${{ vars.WEB_APP_NAME }}
+      ANALYTICS_APP: ${{ vars.ANALYTICS_APP_NAME }}
+      ACR: ${{ vars.ACR_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Infrastructure (idempotent)
+        run: |
+          az deployment group create -g $RG -f infra/main.bicep \
+            -p infra/main.${{ inputs.environment || 'dev' }}.bicepparam -p imageTag=$IMAGE_TAG
+        env:
+          PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+
+      # Migrations run from a self-hosted runner / container job inside the VNet in prod
+      # (the database has no public endpoint). Must be backward compatible with the running version.
+      - name: Database migrations
+        run: |
+          cd backend && npm ci --omit=dev
+          DATABASE_URL="$(az keyvault secret show --vault-name ${{ vars.KEY_VAULT_NAME }} -n database-url --query value -o tsv)" \
+            npx prisma migrate deploy
+
+      - name: Deploy analytics + web
+        run: |
+          az webapp config container set -g $RG -n $ANALYTICS_APP --container-image-name $ACR.azurecr.io/shipops-analytics:$IMAGE_TAG
+          az webapp config container set -g $RG -n $WEB_APP --container-image-name $ACR.azurecr.io/shipops-frontend:$IMAGE_TAG
+
+      - name: Deploy API to staging slot
+        run: az webapp config container set -g $RG -n $API_APP --slot staging --container-image-name $ACR.azurecr.io/shipops-backend:$IMAGE_TAG
+
+      - name: Smoke test staging slot
+        run: |
+          URL="https://$(az webapp show -g $RG -n $API_APP --slot staging --query defaultHostName -o tsv)"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/health/ready"; then exit 0; fi
+            sleep 10
+          done
+          echo "staging slot never became ready" && exit 1
+
+      - name: Swap staging -> production
+        run: az webapp deployment slot swap -g $RG -n $API_APP --slot staging --target-slot production

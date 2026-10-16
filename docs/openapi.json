@@ -1,0 +1,1871 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ShipOps Platform API",
+    "version": "1.0.0",
+    "description": "Customer & shipment management, sales analytics gateway, AI assistant and intranet announcements.\n\n**Auth:** call `POST /api/auth/login` (demo users in README), then click *Authorize* and paste the token.\n\n**Real-time:** connect to `ws://<host>/ws` with subprotocols `[\"shipops.v1\", \"bearer.<token>\"]` to receive `shipment_status_changed` and `shipment_created` events."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Dashboard"
+    },
+    {
+      "name": "Customers"
+    },
+    {
+      "name": "Shipments"
+    },
+    {
+      "name": "Analytics"
+    },
+    {
+      "name": "AI Assistant"
+    },
+    {
+      "name": "Announcements (SharePoint PoC)"
+    },
+    {
+      "name": "Health"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "nullable": true
+              },
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "total",
+          "totalPages"
+        ]
+      },
+      "CreateShipmentRequest": {
+        "type": "object",
+        "properties": {
+          "trackingNumber": {
+            "type": "string",
+            "pattern": "^[A-Z0-9-]{6,32}$",
+            "description": "Optional. Auto-generated (SHP-XXXXXXXXXX) when omitted.",
+            "example": "SHP-24A9F3K2LM"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origin": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Mumbai, MH"
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Bengaluru, KA"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Created"
+            ],
+            "default": "Created",
+            "description": "New shipments always start as Created"
+          }
+        },
+        "required": [
+          "customerId",
+          "origin",
+          "destination"
+        ],
+        "additionalProperties": false
+      },
+      "ShipmentStatus": {
+        "type": "string",
+        "enum": [
+          "Created",
+          "PickedUp",
+          "InTransit",
+          "OutForDelivery",
+          "Delivered",
+          "Exception",
+          "Cancelled"
+        ]
+      },
+      "UpdateShipmentStatusRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Handed to last-mile partner"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "Shipment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trackingNumber": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerCompany": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "allowedNextStatuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShipmentStatus"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedBy": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "trackingNumber",
+          "customerId",
+          "origin",
+          "destination",
+          "status",
+          "allowedNextStatuses",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "updatedBy"
+        ]
+      },
+      "ShipmentDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Shipment"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "statusHistory": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fromStatus": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/ShipmentStatus"
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "toStatus": {
+                      "$ref": "#/components/schemas/ShipmentStatus"
+                    },
+                    "note": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "changedBy": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "changedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "fromStatus",
+                    "toStatus",
+                    "note",
+                    "changedBy",
+                    "changedAt"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "statusHistory"
+            ]
+          }
+        ]
+      },
+      "ShipmentList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Shipment"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "totalCustomers": {
+            "type": "integer"
+          },
+          "totalShipments": {
+            "type": "integer"
+          },
+          "statusDistribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "$ref": "#/components/schemas/ShipmentStatus"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "status",
+                "count"
+              ]
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "totalCustomers",
+          "totalShipments",
+          "statusDistribution",
+          "generatedAt"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@shipops.local"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Admin@123"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "token",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "CustomerStatus": {
+        "type": "string",
+        "enum": [
+          "Active",
+          "Inactive"
+        ],
+        "default": "Active"
+      },
+      "CreateCustomerRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Priya Sharma"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "example": "priya@acme.in"
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "example": "Acme Logistics"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "company"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateCustomerRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "company": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedBy": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "company",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "updatedBy"
+        ]
+      },
+      "CustomerList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Customer"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ChatRequest": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "example": "Where is shipment SHP-24A9F3K2LM?"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Omit to start a new conversation; pass the returned id to continue it."
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "ChatResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "assistant"
+                ]
+              },
+              "content": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "role",
+              "content",
+              "createdAt"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "toolsUsed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "promptTokens": {
+                "type": "integer"
+              },
+              "outputTokens": {
+                "type": "integer"
+              },
+              "latencyMs": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "provider",
+              "toolsUsed",
+              "latencyMs"
+            ]
+          }
+        },
+        "required": [
+          "conversationId",
+          "message",
+          "meta"
+        ]
+      },
+      "ConversationSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ConversationDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "messages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "user",
+                        "assistant"
+                      ]
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "role",
+                    "content",
+                    "createdAt"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "messages"
+            ]
+          }
+        ]
+      },
+      "Announcement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "General",
+              "Operations",
+              "HR",
+              "IT",
+              "Safety"
+            ]
+          },
+          "author": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "body",
+          "category",
+          "author",
+          "publishedAt",
+          "pinned"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Mock login (AUTH_MODE=local). Returns a signed JWT.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Current user from the bearer token",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Liveness probe",
+        "responses": {
+          "200": {
+            "description": "Process is up"
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Readiness probe (checks DB)",
+        "responses": {
+          "200": {
+            "description": "Ready"
+          },
+          "503": {
+            "description": "Dependency down"
+          }
+        }
+      }
+    },
+    "/api/announcements": {
+      "get": {
+        "tags": [
+          "Announcements (SharePoint PoC)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Intranet announcements. Mocked by default; ANNOUNCEMENTS_SOURCE=sharepoint reads a SharePoint Online list via Microsoft Graph.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "General",
+                "Operations",
+                "HR",
+                "IT",
+                "Safety"
+              ]
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Announcements (pinned first, newest first)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Announcement"
+                      }
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/stats": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Totals and shipment status distribution for the dashboard",
+        "responses": {
+          "200": {
+            "description": "Stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/customers": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List customers (paginated, searchable, excludes soft-deleted)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Matches name, email or company (case-insensitive)"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/CustomerStatus"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "email",
+                "company",
+                "createdAt",
+                "updatedAt"
+              ],
+              "default": "createdAt"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "required": false,
+            "name": "sortOrder",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Customers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Create a customer (OPERATOR, ADMIN)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/customers/{id}": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get a customer",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Customers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Update a customer (partial) (OPERATOR, ADMIN)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Customers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Soft delete a customer (ADMIN). Sets deletedAt; record is retained for audit.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "403": {
+            "description": "Insufficient role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shipments": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List shipments (paginated, filter by status/customer, search)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ShipmentStatus"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "customerId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Matches tracking number, origin or destination"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipment page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Create a shipment (OPERATOR, ADMIN). Broadcasts shipment_created.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shipment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Business rule violation (e.g. invalid status transition)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shipments/track/{trackingNumber}": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Retrieve shipment details by tracking number",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9-]{6,32}$"
+            },
+            "required": true,
+            "name": "trackingNumber",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shipments/{id}": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Retrieve shipment details incl. status history",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shipments/{id}/status": {
+      "patch": {
+        "tags": [
+          "Shipments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Update shipment status (OPERATOR, ADMIN). Validates the state machine and broadcasts shipment_status_changed over WebSocket.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShipmentStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shipment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Business rule violation (e.g. invalid status transition)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Ask the AI assistant. Keeps conversation history; omit conversationId to start a new one.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Assistant reply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI provider unavailable / rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "AI provider timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/conversations": {
+      "get": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List the caller's conversations",
+        "responses": {
+          "200": {
+            "description": "Conversations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/conversations/{id}": {
+      "get": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get a conversation with its messages",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Delete a conversation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3f1c2b1e-8a1f-4a43-9a5b-2f7a3c3d9e10"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/analyze": {
+      "post": {
+        "tags": [
+          "Analytics"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Upload sales CSV (salesperson,revenue,region) and get charts + summary statistics. Proxies to the Flask service POST /analyze.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "required": false,
+            "name": "includePng",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis result (Plotly figure JSON, optional base64 PNGs, statistics)"
+          }
+        }
+      }
+    }
+  }
+}

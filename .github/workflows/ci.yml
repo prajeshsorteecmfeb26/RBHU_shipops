@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: shipops, POSTGRES_PASSWORD: shipops, POSTGRES_DB: shipops_test }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U shipops" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://shipops:shipops@localhost:5432/shipops_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx prisma migrate deploy
+      - name: Unit + integration tests
+        run: npm test
+        env: { RUN_INTEGRATION: '1' }
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  analytics:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: analytics } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: analytics/requirements*.txt }
+      - run: pip install -r requirements-dev.txt pip-audit
+      - run: pytest -q
+      - run: pip-audit -r requirements.txt
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    needs: [backend, analytics, frontend]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: { service: [backend, analytics, frontend] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service }}
+          push: false
+          load: true
+          tags: shipops-${{ matrix.service }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: shipops-${{ matrix.service }}:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
