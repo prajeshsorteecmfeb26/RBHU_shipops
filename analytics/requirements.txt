@@ -1,5 +1,5 @@
 flask>=3.0,<4
-flask-cors>=5.0
+flask-cors>=6.0.5
 pandas>=2.2,<3
 plotly>=5.24,<6
 # Kaleido 0.2.1 bundles its own headless Chromium, so PNG export works in a
