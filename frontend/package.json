@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.9.1",
+    "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.62.0",
     "lucide-react": "^0.460.0",
     "plotly.js-dist-min": "^2.35.2",
