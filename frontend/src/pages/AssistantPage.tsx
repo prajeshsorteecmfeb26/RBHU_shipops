@@ -32,7 +32,11 @@ export function AssistantPage() {
     if (loaded.data && skipLoadFor.current !== loaded.data.id) setMessages(loaded.data.messages);
   }, [loaded.data]);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), [messages]);
+  // Braces matter: a useEffect callback may only return a cleanup function. Newer browsers make
+  // scrollIntoView() return a Promise, which React would later try to call ("s is not a function").
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages]);
 
   const ask = async (text: string) => {
     const message = text.trim();

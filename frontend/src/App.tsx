@@ -1,6 +1,5 @@
 import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { RealtimeProvider } from './realtime/RealtimeContext';
 import { Layout } from './components/Layout';
@@ -70,15 +69,3 @@ export function App() {
     </ErrorBoundary>
   );
 }
-
-
-
-// Inside your main App component:
-useEffect(() => {
-  const ws = new WebSocket('ws://localhost:4000/ws');
-
-  ws.onopen = () => console.log('WebSocket connected!');
-  ws.onerror = (err) => console.error('WebSocket error:', err);
-
-  return () => ws.close();
-}, []);
