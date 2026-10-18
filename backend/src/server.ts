@@ -5,6 +5,7 @@ import { prisma } from './lib/prisma';
 import { buildContainer } from './container';
 import { createApp } from './app';
 import { attachWebSocketServer } from './realtime/wsServer';
+import express from 'express'; 
 
 async function main() {
   await prisma.$connect();
@@ -55,4 +56,9 @@ async function main() {
 main().catch((err) => {
   logger.fatal({ err }, 'failed to start');
   process.exit(1);
+});
+
+const app = express();
+app.get('/', (req, res) => {
+  res.send({ message: 'Shipops API is running!' });
 });
