@@ -1,0 +1,101 @@
+Transaction_ID,Date,Product_Name,Quantity,Unit_Price,Total_Revenue,Region,Sales_Channel
+TXN1047,2026-01-02,4K Monitor,3,349.99,1049.97,East,In-Store
+TXN1073,2026-01-09,Noise-Canceling Headphones,1,149.99,149.99,West,Wholesale
+TXN1037,2026-01-14,Noise-Canceling Headphones,2,149.99,299.98,South,In-Store
+TXN1071,2026-01-15,USB-C Hub,4,39.99,159.96,West,In-Store
+TXN1033,2026-01-21,USB-C Hub,1,39.99,39.99,West,In-Store
+TXN1005,2026-01-21,Mechanical Keyboard,1,89.99,89.99,North,Wholesale
+TXN1018,2026-01-22,Ergonomic Desk Chair,4,199.99,799.96,North,Wholesale
+TXN1084,2026-01-28,USB-C Hub,1,39.99,39.99,East,Online
+TXN1088,2026-02-02,Wireless Mouse,4,29.99,119.96,South,In-Store
+TXN1095,2026-02-04,Noise-Canceling Headphones,4,149.99,599.96,West,Online
+TXN1043,2026-02-04,Noise-Canceling Headphones,1,149.99,149.99,North,Online
+TXN1083,2026-02-10,Mechanical Keyboard,5,89.99,449.95,South,In-Store
+TXN1069,2026-02-10,Wireless Mouse,1,29.99,29.99,West,Online
+TXN1053,2026-02-13,4K Monitor,4,349.99,1399.96,East,Online
+TXN1089,2026-02-17,4K Monitor,5,349.99,1749.95,North,Online
+TXN1021,2026-02-18,4K Monitor,1,349.99,349.99,West,Wholesale
+TXN1046,2026-02-19,Wireless Mouse,3,29.99,89.97,North,Online
+TXN1028,2026-02-20,Noise-Canceling Headphones,2,149.99,299.98,East,Wholesale
+TXN1064,2026-02-22,Noise-Canceling Headphones,5,149.99,749.95,West,Online
+TXN1040,2026-02-22,Mechanical Keyboard,5,89.99,449.95,South,Online
+TXN1048,2026-02-23,Noise-Canceling Headphones,4,149.99,599.96,South,Online
+TXN1029,2026-02-24,Wireless Mouse,2,29.99,59.98,West,Online
+TXN1022,2026-02-28,4K Monitor,2,349.99,699.98,South,In-Store
+TXN1090,2026-03-03,Noise-Canceling Headphones,3,149.99,449.97,South,Wholesale
+TXN1076,2026-03-04,Wireless Mouse,3,29.99,89.97,East,In-Store
+TXN1072,2026-03-06,USB-C Hub,3,39.99,119.97,South,Online
+TXN1003,2026-03-13,4K Monitor,3,349.99,1049.97,West,Online
+TXN1045,2026-03-22,Wireless Mouse,3,29.99,89.97,North,Wholesale
+TXN1078,2026-03-22,Wireless Mouse,5,29.99,149.95,South,In-Store
+TXN1009,2026-03-29,4K Monitor,3,349.99,1049.97,East,Wholesale
+TXN1036,2026-03-30,USB-C Hub,1,39.99,39.99,East,In-Store
+TXN1041,2026-04-02,USB-C Hub,5,39.99,199.95,South,Online
+TXN1092,2026-04-09,Ergonomic Desk Chair,3,199.99,599.97,South,Wholesale
+TXN1010,2026-04-10,Wireless Mouse,4,29.99,119.96,West,Wholesale
+TXN1097,2026-04-11,4K Monitor,5,349.99,1749.95,South,Wholesale
+TXN1006,2026-04-13,Mechanical Keyboard,4,89.99,359.96,South,In-Store
+TXN1000,2026-04-13,Ergonomic Desk Chair,5,199.99,999.95,West,Wholesale
+TXN1049,2026-04-16,Wireless Mouse,1,29.99,29.99,West,Wholesale
+TXN1002,2026-04-17,Noise-Canceling Headphones,2,149.99,299.98,North,Online
+TXN1007,2026-05-02,USB-C Hub,3,39.99,119.97,North,Online
+TXN1074,2026-05-09,Mechanical Keyboard,1,89.99,89.99,East,In-Store
+TXN1031,2026-05-11,Noise-Canceling Headphones,4,149.99,599.96,West,Online
+TXN1012,2026-05-11,Ergonomic Desk Chair,3,199.99,599.97,West,Online
+TXN1098,2026-05-11,4K Monitor,5,349.99,1749.95,East,Online
+TXN1085,2026-05-15,Noise-Canceling Headphones,4,149.99,599.96,North,Online
+TXN1032,2026-05-15,USB-C Hub,2,39.99,79.98,South,In-Store
+TXN1075,2026-05-16,4K Monitor,4,349.99,1399.96,East,In-Store
+TXN1077,2026-05-19,Ergonomic Desk Chair,3,199.99,599.97,West,Online
+TXN1013,2026-05-30,USB-C Hub,4,39.99,159.96,East,In-Store
+TXN1011,2026-06-01,USB-C Hub,4,39.99,159.96,North,Wholesale
+TXN1070,2026-06-06,Mechanical Keyboard,5,89.99,449.95,South,In-Store
+TXN1017,2026-06-10,4K Monitor,3,349.99,1049.97,East,Online
+TXN1054,2026-06-11,Noise-Canceling Headphones,4,149.99,599.96,South,In-Store
+TXN1079,2026-06-12,Wireless Mouse,3,29.99,89.97,South,Wholesale
+TXN1034,2026-06-16,USB-C Hub,4,39.99,159.96,East,Online
+TXN1023,2026-06-19,Noise-Canceling Headphones,1,149.99,149.99,North,Online
+TXN1093,2026-06-21,USB-C Hub,1,39.99,39.99,South,Online
+TXN1027,2026-06-24,Ergonomic Desk Chair,1,199.99,199.99,South,Wholesale
+TXN1068,2026-07-07,Noise-Canceling Headphones,4,149.99,599.96,West,Wholesale
+TXN1024,2026-07-07,USB-C Hub,3,39.99,119.97,South,In-Store
+TXN1004,2026-07-08,Wireless Mouse,1,29.99,29.99,North,Online
+TXN1060,2026-07-09,4K Monitor,2,349.99,699.98,West,Online
+TXN1026,2026-07-09,Mechanical Keyboard,1,89.99,89.99,South,In-Store
+TXN1051,2026-07-10,Ergonomic Desk Chair,3,199.99,599.97,North,In-Store
+TXN1015,2026-07-11,Ergonomic Desk Chair,2,199.99,399.98,North,In-Store
+TXN1086,2026-07-20,Ergonomic Desk Chair,1,199.99,199.99,South,Online
+TXN1055,2026-07-21,4K Monitor,3,349.99,1049.97,East,Online
+TXN1044,2026-07-25,Wireless Mouse,1,29.99,29.99,West,Wholesale
+TXN1062,2026-07-27,USB-C Hub,2,39.99,79.98,East,In-Store
+TXN1061,2026-08-01,Mechanical Keyboard,2,89.99,179.98,South,In-Store
+TXN1094,2026-08-02,Mechanical Keyboard,1,89.99,89.99,North,Online
+TXN1008,2026-08-03,Ergonomic Desk Chair,5,199.99,999.95,East,In-Store
+TXN1058,2026-08-03,Ergonomic Desk Chair,1,199.99,199.99,West,Online
+TXN1091,2026-08-04,Mechanical Keyboard,4,89.99,359.96,South,In-Store
+TXN1066,2026-08-05,USB-C Hub,4,39.99,159.96,West,In-Store
+TXN1052,2026-08-06,Wireless Mouse,1,29.99,29.99,South,Wholesale
+TXN1096,2026-08-15,USB-C Hub,4,39.99,159.96,South,Wholesale
+TXN1082,2026-08-19,Mechanical Keyboard,2,89.99,179.98,East,Wholesale
+TXN1020,2026-08-24,Ergonomic Desk Chair,1,199.99,199.99,East,In-Store
+TXN1063,2026-08-25,4K Monitor,3,349.99,1049.97,North,In-Store
+TXN1038,2026-08-30,Noise-Canceling Headphones,1,149.99,149.99,East,In-Store
+TXN1030,2026-09-01,Ergonomic Desk Chair,3,199.99,599.97,South,Online
+TXN1067,2026-09-09,Wireless Mouse,1,29.99,29.99,North,Online
+TXN1059,2026-09-09,Wireless Mouse,5,29.99,149.95,North,Wholesale
+TXN1019,2026-09-10,USB-C Hub,4,39.99,159.96,West,Wholesale
+TXN1099,2026-09-14,Wireless Mouse,3,29.99,89.97,South,Wholesale
+TXN1014,2026-09-15,Noise-Canceling Headphones,3,149.99,449.97,North,In-Store
+TXN1050,2026-09-17,USB-C Hub,4,39.99,159.96,East,Wholesale
+TXN1081,2026-09-18,Wireless Mouse,3,29.99,89.97,East,In-Store
+TXN1042,2026-09-21,Wireless Mouse,3,29.99,89.97,South,Online
+TXN1039,2026-09-22,4K Monitor,4,349.99,1399.96,East,Online
+TXN1087,2026-09-25,Wireless Mouse,5,29.99,149.95,East,Wholesale
+TXN1056,2026-09-27,Wireless Mouse,1,29.99,29.99,South,Online
+TXN1025,2026-09-28,Mechanical Keyboard,4,89.99,359.96,East,Online
+TXN1001,2026-09-28,Mechanical Keyboard,4,89.99,359.96,North,Online
+TXN1057,2026-09-28,Noise-Canceling Headphones,3,149.99,449.97,North,In-Store
+TXN1035,2026-10-01,USB-C Hub,4,39.99,159.96,South,Wholesale
+TXN1016,2026-10-04,Ergonomic Desk Chair,3,199.99,599.97,West,Wholesale
+TXN1065,2026-10-07,Wireless Mouse,1,29.99,29.99,North,In-Store
+TXN1080,2026-10-16,4K Monitor,3,349.99,1049.97,West,In-Store

@@ -4,6 +4,7 @@ import { env } from '../../config/env';
 import { UpstreamError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
 import { TOOL_DEFINITIONS, type ToolExecutor } from './chat.tools';
+import { OfflineAssistant } from './offline.assistant';
 
 export interface ChatTurn {
   role: 'system' | 'user' | 'assistant';
@@ -100,64 +101,66 @@ function mapProviderError(err: unknown): Error {
 }
 
 /**
- * Offline provider for local development, tests and demos without an API key.
- * It still exercises the tool path so the end-to-end flow is realistic.
+ * Offline provider used when no LLM key is configured (and in tests/demos).
+ * Delegates to the rule-based OfflineAssistant, which answers a broad range
+ * of operations questions from live data through the same read-only tools.
  */
 export class MockAiProvider implements AiProvider {
-  readonly name = 'mock';
+  readonly name = 'offline';
 
-  async complete(turns: ChatTurn[], executeTool: ToolExecutor): Promise<CompletionResult> {
-    const last = [...turns].reverse().find((t) => t.role === 'user')?.content ?? '';
-    const priorUserTurns = turns.filter((t) => t.role === 'user').length - 1;
-    const tracking = last.toUpperCase().match(/\b[A-Z]{2,5}-[A-Z0-9]{4,}\b/)?.[0];
-
-    if (tracking) {
-      const r = (await executeTool('get_shipment_by_tracking_number', { trackingNumber: tracking })) as {
-        found: boolean;
-        shipment?: { trackingNumber: string; status: string; origin: string; destination: string; customerName?: string; updatedAt: string };
-      };
-      if (!r.found || !r.shipment) {
-        return { content: `I couldn't find a shipment with tracking number **${tracking}**. Please double-check it.`, toolsUsed: ['get_shipment_by_tracking_number'] };
-      }
-      const s = r.shipment;
-      return {
-        toolsUsed: ['get_shipment_by_tracking_number'],
-        content: `**${s.trackingNumber}** is currently **${s.status}**.\n- Route: ${s.origin} -> ${s.destination}\n- Customer: ${s.customerName ?? 'n/a'}\n- Last update: ${s.updatedAt}`,
-      };
-    }
-
-    if (/(how many|count|summary|overview|status distribution|stats)/i.test(last)) {
-      const stats = (await executeTool('get_operations_summary', {})) as {
-        totalCustomers: number; totalShipments: number; statusDistribution: { status: string; count: number }[];
-      };
-      const lines = stats.statusDistribution.filter((s) => s.count > 0).map((s) => `- ${s.status}: ${s.count}`).join('\n');
-      return {
-        toolsUsed: ['get_operations_summary'],
-        content: `We have **${stats.totalCustomers}** customers and **${stats.totalShipments}** shipments.\n${lines}`,
-      };
-    }
-
-    return {
-      toolsUsed: [],
-      content:
-        `(Mock AI mode - set AI_PROVIDER=openai or azure for real answers.)\n` +
-        `You said: "${last.slice(0, 200)}". ` +
-        (priorUserTurns > 0 ? `This is message #${priorUserTurns + 1} in our conversation, so context is being kept. ` : '') +
-        `Try asking about a tracking number (e.g. "Where is SHP-...?") or "give me a shipment summary".`,
-    };
+  complete(turns: ChatTurn[], executeTool: ToolExecutor): Promise<CompletionResult> {
+    return new OfflineAssistant(executeTool).answer(turns);
   }
 }
 
+/**
+ * Wraps a real LLM provider: if it is unavailable (quota, network, bad key),
+ * the user still gets a data-grounded answer from the offline engine instead
+ * of an error.
+ */
+export class FallbackAiProvider implements AiProvider {
+  constructor(
+    private readonly primary: AiProvider,
+    private readonly fallback: AiProvider = new MockAiProvider(),
+  ) {}
+
+  get name() {
+    return this.primary.name;
+  }
+
+  async complete(turns: ChatTurn[], executeTool: ToolExecutor): Promise<CompletionResult> {
+    try {
+      return await this.primary.complete(turns, executeTool);
+    } catch (err) {
+      if (err instanceof UpstreamError && err.statusCode !== 422) {
+        logger.warn({ provider: this.primary.name, err: err.message }, 'AI provider failed - answering with offline assistant');
+        return this.fallback.complete(turns, executeTool);
+      }
+      throw err;
+    }
+  }
+}
+
+/** 'auto' picks a real LLM when credentials are present, otherwise the offline assistant. */
+export function resolveProviderName(): 'openai' | 'azure' | 'mock' {
+  if (env.AI_PROVIDER !== 'auto') return env.AI_PROVIDER;
+  if (env.AZURE_OPENAI_ENDPOINT && env.AZURE_OPENAI_DEPLOYMENT) return 'azure';
+  if (env.OPENAI_API_KEY) return 'openai';
+  return 'mock';
+}
+
 export function createAiProvider(): AiProvider {
-  switch (env.AI_PROVIDER) {
+  const provider = resolveProviderName();
+  logger.info({ aiProvider: provider }, 'AI assistant provider selected');
+  switch (provider) {
     case 'openai':
-      return new OpenAiCompatibleProvider(
+      return new FallbackAiProvider(new OpenAiCompatibleProvider(
         'openai',
         new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: env.AI_TIMEOUT_MS, maxRetries: 2 }),
         env.OPENAI_MODEL,
-      );
+      ));
     case 'azure':
-      return new OpenAiCompatibleProvider(
+      return new FallbackAiProvider(new OpenAiCompatibleProvider(
         'azure-openai',
         new AzureOpenAI({
           endpoint: env.AZURE_OPENAI_ENDPOINT,
@@ -168,7 +171,7 @@ export function createAiProvider(): AiProvider {
           maxRetries: 2,
         }),
         env.AZURE_OPENAI_DEPLOYMENT!,
-      );
+      ));
     default:
       return new MockAiProvider();
   }

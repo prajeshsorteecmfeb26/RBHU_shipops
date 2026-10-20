@@ -34,9 +34,11 @@ const EnvSchema = z
     ENTRA_API_AUDIENCE: z.string().optional(), // e.g. api://<app-id>
 
     // ---- AI assistant ----
-    // openai | azure | mock (mock = deterministic offline responses, used in dev/test)
-    AI_PROVIDER: z.enum(['openai', 'azure', 'mock']).default('mock'),
-    OPENAI_API_KEY: z.string().optional(),
+    // auto | openai | azure | mock
+    //   auto  = use Azure OpenAI / OpenAI when credentials are set, else the offline assistant
+    //   mock  = offline rule-based assistant grounded in live data (no API key needed)
+    AI_PROVIDER: z.preprocess((v) => (v === '' ? undefined : v), z.enum(['auto', 'openai', 'azure', 'mock']).default('auto')),
+    OPENAI_API_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
     OPENAI_MODEL: z.string().default('gpt-4o-mini'),
     AZURE_OPENAI_ENDPOINT: z.string().url().optional(),
     AZURE_OPENAI_API_KEY: z.string().optional(),
