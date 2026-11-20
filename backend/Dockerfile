@@ -1,5 +1,5 @@
 # ---- build stage ----
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 # Prisma needs OpenSSL, which the slim image doesn't include
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
@@ -11,7 +11,7 @@ COPY src ./src
 RUN npm run build && npm prune --omit=dev
 
 # ---- runtime stage ----
-FROM node:22-bookworm-slim
+FROM node:26-bookworm-slim
 # Prisma needs OpenSSL, which the slim image doesn't include
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
